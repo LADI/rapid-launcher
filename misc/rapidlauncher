@@ -1,0 +1,4 @@
+#!/bin/sh
+
+export LD_LIBRARY_PATH="/usr/lib/rapidlauncher":LD_LIBRARY_PATH
+exec /usr/lib/rapidlauncher/rapidlauncher "$@"

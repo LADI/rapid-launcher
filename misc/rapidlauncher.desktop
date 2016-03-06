@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=RapidLauncher
+GenericName=Application launcher
+Comment=Fast lightweight application launcher
+Exec=rapidlauncher
+Icon=rapidlauncher
+Terminal=false
+Type=Application
+Categories=Utility;
