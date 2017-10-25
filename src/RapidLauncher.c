@@ -11,6 +11,12 @@ static gint screen_width;
 static gint screen_height;
 static AppmanApp** apps = NULL;
 static int apps_count = 0;
+static GtkApplication *application;
+static GtkWidget *main_window;
+static int keep_in_memory = FALSE;
+static GtkWidget *search_entry;
+
+static void activate (GApplication *app, gpointer user_data);
 
 void set_widget_color(GtkWidget *widget, float red, float green, float blue, float opacity) {
 	GdkRGBA bgcolor = {.0, .0, .1, 1.0}; //Default color
@@ -66,14 +72,14 @@ static gboolean on_icon_mouse_leave_callback (GtkWidget *widget, GdkEvent *event
 
 static gboolean on_icon_button_press_callback (GtkWidget *widget, GdkEventButton *event, gpointer data) {
 	appman_app_start((AppmanApp*)data);
-	gtk_main_quit ();
+	keep_in_memory == TRUE ? gtk_widget_hide (main_window) : g_application_quit (application);
 	return TRUE;
 }
 
 static gboolean on_window_key_press_callback (GtkSearchEntry *searchentry, GdkEvent *event, gpointer data)
 {
 	if (((GdkEventKey*)event)->keyval == GDK_KEY_Escape)
-		gtk_main_quit ();
+		keep_in_memory == TRUE ? gtk_widget_hide (main_window) : g_application_quit (application);
 	return FALSE;
 }
 
@@ -81,7 +87,7 @@ static gboolean on_icon_key_press_callback (GtkWidget *widget, GdkEvent *event, 
 {
 	if (((GdkEventKey*)event)->keyval == GDK_KEY_Return) {
 		appman_app_start((AppmanApp*)data);
-		gtk_main_quit ();
+		keep_in_memory == TRUE ? gtk_widget_hide (main_window) : g_application_quit (application);
 	}
 	return FALSE;
 }
@@ -191,12 +197,9 @@ void add_filter_buttons (GtkWidget *box, GtkWidget *grid) {
 }
 */
 
-int main (int argc, char **argv) {
-	GtkWidget *window;
-	
-	gtk_init(&argc, &argv);
-	
-	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+/* Function called only the first time that the application is open if keep_in_memory is set to yes */
+static void startup (GApplication *app, gpointer user_data) {
+	main_window = gtk_application_window_new (app);
 	/* Get the size of the screen */
 	GdkScreen *screen = gdk_screen_get_default ();
 	screen_width = gdk_screen_get_width (screen);
@@ -204,7 +207,7 @@ int main (int argc, char **argv) {
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
 	GtkWidget *scrolled_window = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_min_content_height ((GtkScrolledWindow*)scrolled_window, screen_height-80 );
-	GtkWidget *search_entry = gtk_search_entry_new ();
+	search_entry = gtk_search_entry_new ();
 	gtk_widget_set_margin_top(search_entry, 20);
 	gtk_widget_set_margin_start(search_entry, screen_width-800);
 	gtk_widget_set_margin_end(search_entry, screen_width-800);
@@ -212,28 +215,56 @@ int main (int argc, char **argv) {
 	gtk_grid_set_row_spacing((GtkGrid*)grid, SPACE);
 	gtk_grid_set_column_spacing((GtkGrid*)grid, SPACE);
 	add_applications((GtkGrid*)grid);
-	set_widget_color(window, 0, 0, 0, 0);
-	gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-	gtk_window_fullscreen (GTK_WINDOW(window));
-	gtk_window_set_modal(GTK_WINDOW(window), TRUE);
-	gtk_window_set_title(GTK_WINDOW(window), "RapidLauncher");
+	set_widget_color(main_window, 0, 0, 0, 0);
+	gtk_window_set_decorated(GTK_WINDOW(main_window), FALSE);
+	gtk_window_fullscreen (GTK_WINDOW(main_window));
+	gtk_window_set_modal(GTK_WINDOW(main_window), TRUE);
+	gtk_window_set_title(GTK_WINDOW(main_window), "RapidLauncher");
 	
 	//add_filter_buttons (box, grid); DISABLED
 	gtk_box_pack_start (GTK_BOX (box), search_entry, FALSE, FALSE, 0);
 	gtk_container_add (GTK_CONTAINER(scrolled_window), grid);
 	gtk_widget_set_halign(grid, GTK_ALIGN_CENTER);
 	gtk_box_pack_start (GTK_BOX (box), scrolled_window, FALSE, FALSE, 0);
-	gtk_container_add (GTK_CONTAINER (window), box);
+	gtk_container_add (GTK_CONTAINER (main_window), box);
 	
-	gtk_widget_set_events(window, GDK_POINTER_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_KEY_RELEASE_MASK | GDK_FOCUS_CHANGE_MASK);
+	gtk_widget_set_events(main_window, GDK_POINTER_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_KEY_RELEASE_MASK | GDK_FOCUS_CHANGE_MASK);
 
-	g_signal_connect (G_OBJECT (window), "key-press-event", G_CALLBACK (on_window_key_press_callback), NULL);
+	g_signal_connect (G_OBJECT (main_window), "key-press-event", G_CALLBACK (on_window_key_press_callback), NULL);
 	g_signal_connect (G_OBJECT (search_entry), "key-release-event", G_CALLBACK (on_search_entry_key_release_callback), grid);
-
-	gtk_widget_grab_focus (search_entry);
-	gtk_widget_show_all (window);
+	g_signal_connect (application, "activate", G_CALLBACK (activate), grid);
 	
-	gtk_main ();
+	gtk_widget_grab_focus (search_entry);
+	gtk_widget_show_all (main_window);
+	
+}
 
-	return 0;
+static void activate (GApplication *app, gpointer user_data) {
+	if (keep_in_memory == TRUE) {
+		gtk_widget_show (main_window);
+		gtk_window_get_focus (main_window);
+		gtk_widget_grab_focus (search_entry);
+		gtk_entry_set_text((GtkEntry*)search_entry, "");
+		gint i, row;
+		gint columns = screen_width/(SPACE+ICON_SIZE) - 2;
+		for (i = 0; i < apps_count; i++) {
+			row = i / columns;
+			GtkWidget *child = gtk_grid_get_child_at((GtkGrid*)user_data, i - (row * columns), row);
+			gtk_widget_show (child);
+		}
+	} else
+		startup (app, user_data);
+}
+
+int main (int argc, char **argv) {
+	int status;
+	/* Check arguments */
+	if ((argc > 1) && (g_strcmp0(argv[1], "inmem") == 0)) {
+		keep_in_memory = TRUE;
+	}
+	application = gtk_application_new ("com.rapidlauncher", G_APPLICATION_FLAGS_NONE);
+	g_signal_connect (application, "startup", G_CALLBACK (startup), NULL);
+	status = g_application_run (G_APPLICATION (application), argc, argv);
+	g_object_unref (application);
+	return status;
 }

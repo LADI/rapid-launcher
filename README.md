@@ -12,6 +12,10 @@ Rapid Launcher is born to give a good launcher also for old PCs. It's really sim
 
 ![Screenshot](screenshot.jpg "Screenshot")
 
+### Usage
+
+Use the `inmem` option to keep the application in memory speeding up all the next times you will open the application.
+
 ### Version
 
 0.3
