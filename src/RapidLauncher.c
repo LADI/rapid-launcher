@@ -233,16 +233,16 @@ static void startup (GApplication *app, gpointer user_data) {
 	g_signal_connect (G_OBJECT (main_window), "key-press-event", G_CALLBACK (on_window_key_press_callback), NULL);
 	g_signal_connect (G_OBJECT (search_entry), "key-release-event", G_CALLBACK (on_search_entry_key_release_callback), grid);
 	g_signal_connect (application, "activate", G_CALLBACK (activate), grid);
-	
-	gtk_widget_grab_focus (search_entry);
+
+	gtk_window_set_keep_above (main_window, TRUE);
 	gtk_widget_show_all (main_window);
-	
+
 }
 
 static void activate (GApplication *app, gpointer user_data) {
 	if (keep_in_memory == TRUE) {
 		gtk_widget_show (main_window);
-		gtk_window_get_focus (main_window);
+		gtk_window_present (main_window);
 		gtk_widget_grab_focus (search_entry);
 		gtk_entry_set_text((GtkEntry*)search_entry, "");
 		gint i, row;
