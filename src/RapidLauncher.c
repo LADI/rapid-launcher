@@ -199,6 +199,7 @@ void add_filter_buttons (GtkWidget *box, GtkWidget *grid) {
 
 /* Function called only the first time that the application is open if keep_in_memory is set to yes */
 static void startup (GApplication *app, gpointer user_data) {
+  g_print("startup");
 	main_window = gtk_application_window_new (app);
 	/* Get the size of the screen */
 	GdkScreen *screen = gdk_screen_get_default ();
@@ -240,6 +241,7 @@ static void startup (GApplication *app, gpointer user_data) {
 }
 
 static void activate (GApplication *app, gpointer user_data) {
+  g_print("Activate\n");
 	if (keep_in_memory == TRUE) {
 		gtk_widget_show (main_window);
 		gtk_window_present (main_window);
@@ -261,6 +263,7 @@ int main (int argc, char **argv) {
 	/* Check arguments */
 	if ((argc > 1) && (g_strcmp0(argv[1], "inmem") == 0)) {
 		keep_in_memory = TRUE;
+    argc = 1; /* Hack: The argument has been already processed, don't let g_application taking care about that */
 	}
 	application = gtk_application_new ("com.rapidlauncher", G_APPLICATION_FLAGS_NONE);
 	g_signal_connect (application, "startup", G_CALLBACK (startup), NULL);
