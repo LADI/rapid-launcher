@@ -235,7 +235,6 @@ static void startup (GApplication *app, gpointer user_data) {
 	g_signal_connect (G_OBJECT (search_entry), "key-release-event", G_CALLBACK (on_search_entry_key_release_callback), grid);
 	g_signal_connect (application, "activate", G_CALLBACK (activate), grid);
 
-	gtk_window_set_keep_above (main_window, TRUE);
 	gtk_widget_show_all (main_window);
 
 }
