@@ -1,3 +1,3 @@
 [submodule "Appman"]
 	path = Appman
-	url = https://github.com/echo-devim/Appman
+	url = ../appman-vala
